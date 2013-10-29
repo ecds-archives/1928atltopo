@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Atlanta Topo</title>
+    <link rel="stylesheet" href="styleTheme.css" type="text/css">
+    <link rel="stylesheet" href="style.css" type="text/css">
+    <script src="http://openlayers.org/api/OpenLayers.js"></script>
+    <script type="text/javascript">
+
+        var map, layerOsm, layerTMSOverlay;
+        var mapBounds = new OpenLayers.Bounds( -84.4166685641, 33.7333322344, -84.3166655603, 33.7833352116);
+	  var minZoomLevel = 8;
+	  var maxZoomLevel = 18;
+        var numZoomLevels = 11;
+
+        function init(){
+          // map
+	    var options = {
+	                   projection: new OpenLayers.Projection("EPSG:900913"),
+	                   displayProjection: new OpenLayers.Projection("EPSG:4326"),
+	                   units: "m",
+                         maxExtent: new OpenLayers.Bounds(-20037508, -20037508, 20037508, 20037508.34),
+                         eventListeners: { "zoomend": mapEvent},
+		            };
+	    map = new OpenLayers.Map('map', options);    
+
+          // create OSM layer using local tiles
+          layerOsm = new OpenLayers.Layer.TMS( "OSM Overlay", "",
+                                               {   attribution: "Topo Tiles &copy; JLKittle, OSM Tiles &copy; <a href='http://openstreetmap.org/copyright'>OpenStreetMap</a>, License <a href='http://creativecommons.org/licenses/by-sa/2.0/'>CC-BY-SA</a>",
+                                                   type: 'png', 
+                                                  alpha: true, 
+                                           minZoomLevel: 8,
+                                           maxZoomLevel: 18,
+                                                 getURL: overlay_getTileOsm, 
+                                            isBaseLayer: true,
+                                              layername: 'OSM'});
+          map.addLayer(layerOsm);
+          
+          // create Topo Overlay layer
+          layerTMSOverlay = new OpenLayers.Layer.TMS( "TMS Overlay", "",
+                                               {   type: 'jpg', 
+                                                  alpha: true, 
+                                                 getURL: overlay_getTileTopo, 
+                                            isBaseLayer: false,
+                                              layername: '1928 Topo'});
+          if (OpenLayers.Util.alphaHack() == false) { layerTMSOverlay.setOpacity(0.7); }
+          map.addLayer(layerTMSOverlay);
+  
+          // set map display details and show it
+          map.addControl(new OpenLayers.Control.MousePosition());
+          // use permalink if available
+          var pLink = new OpenLayers.Control.Permalink({anchor: true});
+          map.addControl(pLink);
+          if (pLink.base.indexOf("zoom") == -1) {
+              // default map view 
+              map.zoomToExtent( mapBounds.transform(map.displayProjection, map.projection ) );
+          }
+        }
+
+        function overlay_getTileTopo(bounds) {
+	    var res = this.map.getResolution();
+	    var x = Math.round((bounds.left - this.maxExtent.left) / (res * this.tileSize.w));
+	    var y = Math.round((this.maxExtent.top - bounds.top) / (res * this.tileSize.h));
+	    var z = this.map.getZoom();
+	    var limit = Math.pow(2, z);
+
+	    if (y < 0 || y >= limit) {
+	        return "http://www.maptiler.org/img/none.png";
+	    } else {
+	        x = ((x % limit) + limit) % limit;
+	        return "./tilesTopo/" + z + "/" + x + "/" + (limit - y - 1) + "." + this.type;
+	    }
+        }
+
+        function overlay_getTileOsm(bounds) {
+	    var res = this.map.getResolution();
+	    var x = Math.round((bounds.left - this.maxExtent.left) / (res * this.tileSize.w));
+	    var y = Math.round((this.maxExtent.top - bounds.top) / (res * this.tileSize.h));
+	    var z = this.map.getZoom();
+	    var limit = Math.pow(2, z);
+
+	    if (y < 0 || y >= limit) {
+	        return "http://www.maptiler.org/img/none.png";
+	    } else {
+	        x = ((x % limit) + limit) % limit;
+	        return "./tilesOsm/" + z + "/" + x + "/" + y + "." + this.type;
+	    }
+        }
+
+	  function getWindowHeight() {
+	    if (self.innerHeight) 
+            return self.innerHeight;
+	    if (document.documentElement && document.documentElement.clientHeight)
+	      return document.documentElement.clientHeight;
+	    if (document.body) return document.body.clientHeight;
+	      return 0;
+	  }
+
+	  function getWindowWidth() {
+	    if (self.innerWidth) 
+            return self.innerWidth;
+	    if (document.documentElement && document.documentElement.clientWidth)
+	      return document.documentElement.clientWidth;
+	    if (document.body) return document.body.clientWidth;
+	      return 0;
+	   }
+
+         function resize() {  
+	     var map = document.getElementById("map");  
+	     var header = document.getElementById("header");  
+	     var subheader = document.getElementById("subheader");  
+	     map.style.height = (getWindowHeight()-100) + "px";
+	     map.style.width = (getWindowWidth()-40) + "px";
+	     header.style.width = (getWindowWidth()-40) + "px";
+	     subheader.style.width = (getWindowWidth()-40) + "px";
+	     if (map.updateSize) { map.updateSize(); };
+         } 
+
+	   onresize=function(){ resize(); };	
+
+         var maxOpacity = 1.0;
+         var minOpacity = 0.0;
+         function changeOpacity(byOpacity) {
+           var newOpacity = (parseFloat(OpenLayers.Util.getElement('opacity').value) + byOpacity).toFixed(1);
+           newOpacity = Math.min(maxOpacity,
+                        Math.max(minOpacity, newOpacity));
+           OpenLayers.Util.getElement('opacity').value = newOpacity;
+           layerTMSOverlay.setOpacity(newOpacity);
+         }
+
+         function mapEvent(event) {
+           if(event.type == "zoomend") {
+             OpenLayers.Util.getElement('zoom').value = map.getZoom();
+           }
+         }
+	
+    </script>
+  </head>
+  <body onload="init()">
+      <h1 id="title">Atlanta 1927-30 Topographic Maps with Open Street Map overlay | <a href="http://disc.library.emory.edu/atlantamaps/atlanta-1927-30-topographic-maps-with-open-street-map-overlay/" title="About Map">About this map</a></h1>
+
+    <div id="map" class="smallmap"></div>
+    <script type="text/javascript" >resize()</script>
+
+    <div id="docs">
+        <p>Topo Layer Opacity:
+            <a title="decrease opacity" href="javascript: changeOpacity(-0.1);">&lt;&lt;</a>
+            <input id="opacity" type="text" value="0.7" size="1" disabled="true" />
+            <a title="increase opacity" href="javascript: changeOpacity(0.1);">&gt;&gt;</a>
+            &nbsp;&nbsp;&nbsp;Zoom:
+            <input id="zoom" type="text" value="?" size="1" disabled="true" />
+        </p>
+    </div>
+  </body>
+</html>

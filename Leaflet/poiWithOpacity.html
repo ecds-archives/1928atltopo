@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Leaflet Atlanta Topo</title>
+	<meta charset="utf-8" />
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="http://leafletjs.com/dist/leaflet.css" />
+	<!--[if lte IE 8]><link rel="stylesheet" href="http://leafletjs.com/dist/leaflet.ie.css" /><![endif]-->
+</head>
+<body>
+	<div id="map" style="height: 800px"></div>
+
+	<script src="http://leafletjs.com/dist/leaflet.js"></script>
+	<script>
+            var urlTopo = "../tilesTopo/{z}/{x}/{y}.jpg";
+            var urlOsm  = "../tilesOsm/{z}/{x}/{y}.png";
+
+            var allAttribution = 'Topo tiles &copy; JLKittle, Map tiles &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>';
+
+  		var tileLayerTopo   = L.tileLayer(urlTopo, {tms: true, attribution: allAttribution}),
+                tileLayerOsm2   = L.tileLayer(urlOsm, {opacity: 0.2}),
+                tileLayerOsm5   = L.tileLayer(urlOsm, {opacity: 0.5}),
+                tileLayerOsm7   = L.tileLayer(urlOsm, {opacity: 0.7});
+
+    		var iconUniversity = L.icon({iconUrl: 'university.png', iconSize: [32, 37], iconAnchor: [16, 37], popupAnchor: [0, -28]});
+      	var iconGolf       = L.icon({iconUrl: 'golfing.png',    iconSize: [32, 37], iconAnchor: [16, 37], popupAnchor: [0, -28]});
+    		var iconBaseball   = L.icon({iconUrl: 'baseball.png',   iconSize: [32, 37], iconAnchor: [16, 37], popupAnchor: [0, -28]});
+
+            var poiGatech  = L.marker([33.77242, -84.3947], {icon: iconUniversity, title: 'Georgia School of Technology'}),
+                poiAtlUniv = L.marker([33.75404, -84.40913], {icon: iconUniversity, title: 'Atlanta University'}),
+                poiEmory   = L.marker([33.79195, -84.32174], {icon: iconUniversity, title: 'Emory University'});
+            var pointLayerEducation= L.layerGroup([poiGatech, poiAtlUniv, poiEmory]);
+
+            var poiDruidHillsCC = L.marker([33.77519, -84.33127], {title: 'Druid Hills Country Club', icon: iconGolf});
+            var poiEastLakeCC   = L.marker([33.74119, -84.30239], {title: 'Atlanta Athletic Club Golf Course', icon: iconGolf});
+            var poiPoncePark = L.marker([33.77444, -84.36579], {title: 'Ponce de Leon Park', icon: iconBaseball});
+            var pointLayerSport = L.layerGroup([poiPoncePark , poiDruidHillsCC, poiEastLakeCC]);
+
+		var map = L.map('map', {
+                                    center: new L.LatLng(33.75824, -84.38474),
+                                    zoom: 13, maxZoom: 18, minZoom: 8, 
+	                              layers: [tileLayerTopo, tileLayerOsm2, pointLayerSport, pointLayerEducation]});
+
+            var baseMaps = {"1928 Topo": tileLayerTopo};
+            var overlayMaps = {"Osm 0.2": tileLayerOsm2,
+                               "Osm 0.5": tileLayerOsm5,
+                               "Osm 0.7": tileLayerOsm7,
+                               "Education": pointLayerEducation,
+                               "Sport": pointLayerSport 
+                               };
+
+            L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+		var popup = L.popup();
+
+		function onMapClick(e) {
+			popup
+				.setLatLng(e.latlng)
+				.setContent("You clicked the map at " + e.latlng.toString())
+				.openOn(map);
+		}
+
+		map.on('click', onMapClick);
+
+	</script>
+</body>
+</html>
